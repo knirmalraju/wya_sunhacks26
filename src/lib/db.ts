@@ -1,4 +1,6 @@
 import "server-only";
+// Same as instrumentation.ts, in case this module loads first.
+if (typeof process !== "undefined") process.env.TZ = process.env.APP_TIMEZONE || "America/Phoenix";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
@@ -270,19 +272,17 @@ export type SavedProfile = Pick<User, "name" | "username" | "major" | "year" | "
 // same account for the same browser even without shared storage.
 export function ensureDeviceUser(device: string, saved: SavedProfile | null): User {
   const key = `${device}@device.wya`;
-  const existing = getUserByEmail(key);
-  if (existing) return existing;
   const hash = createHash("sha256").update(device).digest("hex");
   const id = `d${hash.slice(0, 12)}`;
-  const byId = getUser(id);
-  if (byId) return byId;
+  const existing = getUserByEmail(key) ?? getUser(id);
+  if (existing) return syncSaved(existing, saved);
   return mutate((d) => {
     let uname = saved?.username?.replace(/[^a-z0-9_.]/g, "").slice(0, 30) || `student${(parseInt(hash.slice(0, 8), 16) % 9000) + 1000}`;
     if (d.users.some((u) => u.username === uname)) uname = `${uname}${hash.slice(12, 15)}`;
     const user: User = {
       id,
       email: key,
-      name: saved?.name?.slice(0, 60) || "Sun Devil",
+      name: saved?.name?.slice(0, 60) || "Sparky",
       username: uname,
       major: saved?.major?.slice(0, 60) || "",
       year: saved?.year?.slice(0, 60) || "",
@@ -305,6 +305,32 @@ export function ensureDeviceUser(device: string, saved: SavedProfile | null): Us
     welcomeData(d, user.id);
     return user;
   });
+}
+
+// Without shared storage a server can hold an older copy of someone's account.
+// Their browser's saved profile is always the newest, so it wins.
+function syncSaved(user: User, saved: SavedProfile | null): User {
+  if (!saved) return user;
+  const want = {
+    name: saved.name?.slice(0, 60) || user.name,
+    major: saved.major?.slice(0, 60) ?? user.major,
+    year: saved.year?.slice(0, 60) ?? user.year,
+    commute: saved.commute?.slice(0, 60) ?? user.commute,
+    bio: saved.bio?.slice(0, 160) ?? user.bio,
+  };
+  const uname = saved.username?.replace(/[^a-z0-9_.]/g, "").slice(0, 30);
+  const interests = Array.isArray(saved.interests) ? saved.interests.map(String).slice(0, 20) : user.interests;
+  const changed =
+    (Object.keys(want) as (keyof typeof want)[]).some((k) => user[k] !== want[k]) ||
+    (uname && uname !== user.username) ||
+    interests.join("|") !== user.interests.join("|");
+  if (!changed) return user;
+  mutate((d) => {
+    Object.assign(user, want);
+    user.interests = interests;
+    if (uname && uname !== user.username && !d.users.some((u) => u.username === uname && u.id !== user.id)) user.username = uname;
+  });
+  return user;
 }
 
 export function followers(id: string) {
