@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { after } from "next/server";
@@ -92,7 +93,7 @@ export async function storeStatus() {
       reachable = e instanceof Error ? e.message.slice(0, 200) : "error";
     }
   }
-  return { store: storeKind, reachable, redisEnvNames: names, vercel: Boolean(env.VERCEL), nextauthSecret: Boolean(env.NEXTAUTH_SECRET) };
+  return { store: storeKind, reachable, redisEnvNames: names, vercel: Boolean(env.VERCEL) };
 }
 
 // Pull the latest copy from shared storage. Call once at the start of a request
@@ -261,23 +262,49 @@ export function upsertUserFromSignIn(email: string, name?: string | null): User 
   });
 }
 
-// One-button sign-in: one account per browser device id. The internal email is
-// never shown; the person picks their name and username during setup.
-export function upsertDeviceUser(device: string): User {
+// The parts of your own profile your browser remembers (see auth.ts).
+export type SavedProfile = Pick<User, "name" | "username" | "major" | "year" | "commute" | "bio" | "interests">;
+
+// One account per browser device id, with no sign-in. The id, username and
+// starting name are derived from the device id, so every server builds the
+// same account for the same browser even without shared storage.
+export function ensureDeviceUser(device: string, saved: SavedProfile | null): User {
   const key = `${device}@device.wya`;
   const existing = getUserByEmail(key);
   if (existing) return existing;
-  const user = upsertUserFromSignIn(key, "New student");
-  mutate((d) => {
-    let uname = `student${Math.floor(1000 + Math.random() * 9000)}`;
-    while (d.users.some((u) => u.username === uname && u.id !== user.id)) uname = `student${Math.floor(1000 + Math.random() * 9000)}`;
-    user.username = uname;
+  const hash = createHash("sha256").update(device).digest("hex");
+  const id = `d${hash.slice(0, 12)}`;
+  const byId = getUser(id);
+  if (byId) return byId;
+  return mutate((d) => {
+    let uname = saved?.username?.replace(/[^a-z0-9_.]/g, "").slice(0, 30) || `student${(parseInt(hash.slice(0, 8), 16) % 9000) + 1000}`;
+    if (d.users.some((u) => u.username === uname)) uname = `${uname}${hash.slice(12, 15)}`;
+    const user: User = {
+      id,
+      email: key,
+      name: saved?.name?.slice(0, 60) || "Sun Devil",
+      username: uname,
+      major: saved?.major?.slice(0, 60) || "",
+      year: saved?.year?.slice(0, 60) || "",
+      bio: saved?.bio?.slice(0, 160) || "",
+      commute: saved?.commute?.slice(0, 60) || "",
+      interests: Array.isArray(saved?.interests) ? saved.interests.map(String).slice(0, 20) : [],
+      status: "available",
+      active: true,
+      available: false,
+      onCampus: true,
+      zone: "mu",
+      post: null,
+      slots: [],
+      privacy: { ...DEFAULT_PRIVACY },
+      canvas: null,
+      onboarded: true,
+      lastSeen: Date.now(),
+    };
+    d.users.push(user);
+    welcomeData(d, user.id);
+    return user;
   });
-  return user;
-}
-
-export function isDeviceAccount(email: string) {
-  return email.endsWith("@device.wya");
 }
 
 export function followers(id: string) {

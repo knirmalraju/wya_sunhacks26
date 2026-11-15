@@ -1,57 +1,57 @@
 import "server-only";
-import { getServerSession, type NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
-import { redirect } from "next/navigation";
-import { flush, getUser, hydrate, upsertDeviceUser } from "./db";
+import { cookies } from "next/headers";
+import { ensureDeviceUser, hydrate, type SavedProfile } from "./db";
 
-// Sign-in is one button. The browser keeps a random device id (localStorage)
-// and sends it on sign-in; each device id is one account, so the same browser
-// always comes back to the same profile. There's no email, password or SSO,
-// which means anyone with the link can join (fine for a demo).
+// There is no sign-in. middleware.ts gives each browser a device id cookie, and
+// that id is the account. Any server can rebuild the same account from the id
+// (plus the profile cookie below), so hosts like Vercel, where each request may
+// land on a different server, never bounce people to a login page.
+export const DEVICE_COOKIE = "wya-device";
+export const PROFILE_COOKIE = "wya-profile";
 
-export const authOptions: NextAuthOptions = {
-  providers: [
-    CredentialsProvider({
-      id: "device",
-      name: "Get started",
-      credentials: { device: { label: "Device", type: "text" } },
-      async authorize(creds) {
-        const device = String(creds?.device || "").trim().toLowerCase();
-        if (!/^[a-z0-9-]{16,64}$/.test(device)) return null;
-        await hydrate();
-        const user = upsertDeviceUser(device);
-        await flush();
-        return { id: user.id, name: user.name };
-      },
-    }),
-  ],
-  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 365 },
-  pages: { signIn: "/signin", error: "/signin" },
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user?.id) token.uid = user.id;
-      return token;
-    },
-    async session({ session, token }) {
-      (session as { uid?: string }).uid = token.uid as string | undefined;
-      return session;
-    },
-  },
-};
-
-export async function currentUser() {
-  const session = await getServerSession(authOptions);
-  const uid = (session as { uid?: string } | null)?.uid;
-  if (!uid) return null;
-  await hydrate();
-  return getUser(uid);
+function readProfile(raw: string | undefined): SavedProfile | null {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SavedProfile;
+  } catch {
+    return null;
+  }
 }
 
-// For pages behind sign-in. New accounts finish setup first.
-export async function requireUser(opts: { allowUnfinished?: boolean } = {}) {
+export async function currentUser() {
+  const jar = await cookies();
+  const device = jar.get(DEVICE_COOKIE)?.value;
+  if (!device || !/^[a-z0-9-]{16,64}$/i.test(device)) return null;
+  await hydrate();
+  return ensureDeviceUser(device.toLowerCase(), readProfile(jar.get(PROFILE_COOKIE)?.value));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function requireUser(_opts: { allowUnfinished?: boolean } = {}) {
   const me = await currentUser();
-  if (!me) redirect("/signin");
-  if (!me.onboarded && !opts.allowUnfinished) redirect("/welcome");
+  // Only possible if the browser blocks cookies.
+  if (!me) throw new Error("wya needs cookies turned on to keep your account.");
   me.lastSeen = Date.now();
   return me;
+}
+
+// Remember the person's own profile in their browser, so it survives on servers
+// that don't share storage. Call from server actions after profile changes.
+export async function rememberProfile(me: SavedProfile) {
+  const profile: SavedProfile = {
+    name: me.name,
+    username: me.username,
+    major: me.major,
+    year: me.year,
+    commute: me.commute,
+    bio: me.bio,
+    interests: me.interests,
+  };
+  (await cookies()).set(PROFILE_COOKIE, JSON.stringify(profile), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365 * 2,
+  });
 }

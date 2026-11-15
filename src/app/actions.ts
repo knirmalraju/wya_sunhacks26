@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth";
+import { rememberProfile, requireUser } from "@/lib/auth";
 import { disconnectCanvas, oauthConfigured, saveSecret, syncCanvas } from "@/lib/canvas";
 import { ALL_NICHES, STATUSES, ZONES, zoneName } from "@/lib/constants";
 import { flush, getUser, mutate } from "@/lib/db";
@@ -251,6 +251,7 @@ export async function saveAccount(f: FormData) {
       if (f.has(k)) me[k] = str(f, k, k === "bio" ? 160 : 60);
     }
   });
+  await rememberProfile(me);
   await done();
   const next = str(f, "next");
   if (error) await go(`${next || "/account/edit"}?error=${error}`);
@@ -304,6 +305,7 @@ export async function saveInterests(f: FormData) {
     me.interests = list.slice(0, 20);
     me.onboarded = true;
   });
+  await rememberProfile(me);
   await done();
   await go(str(f, "next") || "/");
 }

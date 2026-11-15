@@ -15,10 +15,10 @@ Open http://localhost:3000. Click **Get started** to sign in. A seeded campus of
 
 To reset the demo world, delete `data/db.json` and restart.
 
-## Sign-in: one button
-`/signin` has a single **Get started** button. The browser keeps a random device id in `localStorage` and sends it on sign-in; each device id is one account, so the same browser always returns to the same profile (sessions last a year). New accounts go to `/welcome` (name, username, optional Canvas) and `/welcome/niches`.
+## No sign-in
+The app opens straight to Home. On the first visit, `src/middleware.ts` gives the browser a random device id cookie, and that id is the account. The account's id and starting username are derived from the device id, and your own profile (name, username, major, niches) is also kept in a cookie, so any server rebuilds the same account even without shared storage. Edit your name and niches in Account and Settings; `/welcome` still exists but is optional.
 
-There's no email, password or student check, so anyone with the link can join. That's fine for a demo. Before a real launch, put a real sign-in back (e.g. school email + one-time code). Clearing browser data on a device means starting a new account.
+Anyone with the link can use it, which is fine for a demo. Clearing cookies starts a new account. Activity like posts, follows and messages is only shared between servers when Redis is connected (below).
 
 ## Deploying to Vercel
 
@@ -27,8 +27,7 @@ so the data needs shared storage or sign-in won't stick:
 
 1. In your Vercel project, open **Storage → Create Database → Upstash (Redis)**, pick the free plan, and connect it to this project.
    That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` (the app also accepts `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
-2. Make sure `NEXTAUTH_SECRET` is set (any long random string) and `NEXTAUTH_URL` is your site URL.
-3. Redeploy.
+2. Redeploy.
 
 Vercel's **Redis** integration (a single `REDIS_URL`) works too, and so do prefixed names like `STORAGE_KV_REST_API_URL`.
 To check, open `/api/health` on your site: `store` should be `redis-rest` or `redis-url` and `reachable` should be `true`.

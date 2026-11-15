@@ -7,7 +7,7 @@ import { authorizeUrl, oauthConfigured } from "@/lib/canvas";
 export async function GET(req: NextRequest) {
   const me = await currentUser();
   const origin = process.env.NEXTAUTH_URL || req.nextUrl.origin;
-  if (!me) return NextResponse.redirect(new URL("/signin", origin));
+  if (!me) return NextResponse.redirect(new URL("/", origin));
   const back = req.nextUrl.searchParams.get("back") || "/calendar";
   if (!oauthConfigured) {
     return NextResponse.redirect(new URL(`${back}?canvasError=${encodeURIComponent("Canvas login isn't set up yet (needs a Canvas Developer Key).")}`, origin));

@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const fail = (msg: string) => NextResponse.redirect(new URL(`${back}?canvasError=${encodeURIComponent(msg)}`, origin));
 
   const me = await currentUser();
-  if (!me) return NextResponse.redirect(new URL("/signin", origin));
+  if (!me) return NextResponse.redirect(new URL("/", origin));
   const { searchParams } = req.nextUrl;
   if (searchParams.get("error")) return fail("Canvas sign-in was cancelled.");
   const code = searchParams.get("code");

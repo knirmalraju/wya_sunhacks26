@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { signOutUrl } from "./signout";
 import { linkCanvas, resyncCanvas, unlinkCanvas, updatePrivacy } from "@/app/actions";
 import { Avatar, Card, Hidden, Icon, PageHeader, Switch, btn } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
@@ -143,7 +142,6 @@ export default async function Settings({ searchParams }: { searchParams: Promise
                 )}
               </div>
             </Card>
-            <a href={signOutUrl} className={`${btn.quiet} mt-2 self-start`}>Sign out</a>
           </section>
         </div>
       </div>
