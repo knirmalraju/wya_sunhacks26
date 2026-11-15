@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { demoLoginEnabled, isStudentEmail, requireUser } from "@/lib/auth";
-import { markVerified } from "@/lib/verify";
+import { isStudentEmail, requireUser } from "@/lib/auth";
+import { sendCode } from "@/lib/emailCode";
 import { disconnectCanvas, oauthConfigured, saveSecret, syncCanvas } from "@/lib/canvas";
 import { ALL_NICHES, STATUSES, ZONES, zoneName } from "@/lib/constants";
 import { getUser, mutate } from "@/lib/db";
@@ -251,17 +251,6 @@ export async function saveAccount(f: FormData) {
 
 // "Log in with Canvas" (SSO) when a Developer Key is configured; otherwise a
 // pasted personal access token, or demo data.
-// Developer-only student check (no Google keys yet): accepts a typed .edu email.
-export async function verifyDemo(f: FormData) {
-  const me = await requireUser({ allowUnfinished: true, allowUnverified: true });
-  const email = str(f, "email", 120).toLowerCase();
-  if (!demoLoginEnabled) redirect("/verify");
-  if (!isStudentEmail(email)) redirect("/verify?error=notstudent");
-  markVerified(me.id, email, "demo");
-  done();
-  redirect(me.onboarded ? "/" : "/welcome");
-}
-
 export async function linkCanvas(f: FormData) {
   const me = await requireUser({ allowUnfinished: true });
   const back = str(f, "back") || "/welcome";
@@ -326,4 +315,13 @@ export async function removeSlot(f: FormData) {
   const sid = str(f, "id");
   mutate(() => { me.slots = me.slots.filter((s) => s.id !== sid); });
   done();
+}
+
+// ---------- Sign-in ----------
+
+// Step 1 of sign-in: email a 6-digit code to a school address. Public (no session needed).
+export async function requestSignInCode(rawEmail: string): Promise<{ ok: boolean; error?: string }> {
+  const email = String(rawEmail ?? "").trim().toLowerCase().slice(0, 120);
+  if (!isStudentEmail(email)) return { ok: false, error: "Use your school email. It ends in .edu." };
+  return sendCode(email);
 }

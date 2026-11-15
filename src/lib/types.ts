@@ -61,7 +61,7 @@ export type User = {
   canvas: CanvasInfo | null;
   onboarded: boolean;
   // Proof the person is a student: a .edu account they signed into with SSO.
-  verified?: { email: string; via: "sso" | "canvas" | "demo"; at: number } | null;
+  verified?: { email: string; via: "email" | "sso" | "canvas" | "demo"; at: number } | null;
   lastSeen: number;
   demo?: { freeMins: number }; // seeded users: post time is kept fresh relative to "now"
 };
@@ -130,4 +130,6 @@ export type DB = {
   chats: Chat[];
   // Canvas OAuth tokens, by user id. Server-only; never sent to the browser.
   canvasSecrets?: Record<string, CanvasSecret>;
+  // Pending email sign-in codes, by email. Hashed; never sent to the browser.
+  signInCodes?: Record<string, { hash: string; expiresAt: number; tries: number; sentAt: number }>;
 };

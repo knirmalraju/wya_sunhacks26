@@ -8,7 +8,7 @@ export default async function Niches() {
     <form action={saveInterests} className="mx-auto flex min-h-screen max-w-3xl flex-col gap-5 px-5 py-8">
       <input type="hidden" name="next" value="/" />
       <div className="flex flex-col gap-2">
-        <span className="text-[13px] font-semibold text-muted">Step 3 of 3</span>
+        <span className="text-[13px] font-semibold text-muted">Step 2 of 2</span>
         <div aria-hidden="true" className="h-1.5 rounded-full bg-maroon" />
       </div>
       <div className="flex flex-col gap-1.5">

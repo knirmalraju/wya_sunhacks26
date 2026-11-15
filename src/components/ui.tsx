@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { statusColor } from "@/lib/constants";
 export { Switch } from "./Switch";
@@ -125,17 +126,18 @@ export function Field({ id, label, hint, children }: { id: string; label: string
   );
 }
 
-export function Logo({ size = 36 }: { size?: number }) {
+// The hand-lettered "wya" wordmark. `light` is the white version for dark backgrounds.
+export function Logo({ height = 44, light = false }: { height?: number; light?: boolean }) {
   return (
-    <span className="flex items-center gap-2.5">
-      <span aria-hidden="true" className="relative flex items-center justify-center rounded-[30%] bg-maroon text-white shadow-[0_6px_16px_rgba(140,29,64,0.3)]" style={{ width: size, height: size }}>
-        <svg width={size * 0.55} height={size * 0.55} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 4v16h14" />
-          <circle cx="16" cy="9" r="3" fill="#FFC627" stroke="#FFC627" />
-        </svg>
-      </span>
-      <span className="text-xl font-extrabold tracking-[-0.03em]">Layover</span>
-    </span>
+    <Image
+      src={light ? "/wya-logo-light.png" : "/wya-logo.png"}
+      alt="wya"
+      width={Math.round(height * (695 / 336))}
+      height={height}
+      priority
+      className="select-none"
+      draggable={false}
+    />
   );
 }
 

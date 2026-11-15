@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   if (!me) return NextResponse.redirect(new URL("/signin", origin));
   const back = req.nextUrl.searchParams.get("back") || "/calendar";
   if (!oauthConfigured) {
-    return NextResponse.redirect(new URL(`${back}?canvasError=${encodeURIComponent("Canvas SSO isn't set up yet (needs a Canvas Developer Key).")}`, origin));
+    return NextResponse.redirect(new URL(`${back}?canvasError=${encodeURIComponent("Canvas login isn't set up yet (needs a Canvas Developer Key).")}`, origin));
   }
   const state = randomBytes(16).toString("hex");
   const res = NextResponse.redirect(authorizeUrl(state, `${origin}/api/canvas/callback`));

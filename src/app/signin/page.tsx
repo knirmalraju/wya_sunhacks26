@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { FadeIn, Float, Item, Pulse, Stagger } from "@/components/motion";
 import { Avatar, Chip, Icon, Logo } from "@/components/ui";
-import { currentUser, providersAvailable } from "@/lib/auth";
+import { currentUser, studentDomain } from "@/lib/auth";
+import { emailConfigured } from "@/lib/emailCode";
 import { SignInButtons } from "./SignInButtons";
 
 const ERRORS: Record<string, string> = {
-  CredentialsSignin: "Enter a valid email address.",
-  OAuthSignin: "Google sign-in didn't start. Try again.",
-  OAuthCallback: "Google sign-in didn't finish. Try again.",
+  CredentialsSignin: "That code didn't work. Send a new one and try again.",
 };
 
 const FEATURES = [
@@ -17,12 +16,13 @@ const FEATURES = [
 ];
 
 export default async function SignIn({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
-  if (await currentUser()) redirect("/");
+  const me = await currentUser();
+  if (me?.verified) redirect(me.onboarded ? "/" : "/welcome");
   const { error } = await searchParams;
   return (
     <div className="canvas-glow min-h-screen">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 md:px-8">
-        <Logo />
+        <Logo height={56} />
         <a href="#signin" className="rounded-full px-4 py-2 text-sm font-bold text-maroon hover:bg-maroon-tint">Sign in</a>
       </header>
 
@@ -40,13 +40,13 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
           </FadeIn>
           <FadeIn delay={0.1}>
             <p className="max-w-xl text-[17px] leading-relaxed text-muted">
-              Layover finds students who share your niches, are on campus right now, and are actually free when you are.
+              wya finds students who share your niches, are on campus right now, and are actually free when you are.
             </p>
           </FadeIn>
           <FadeIn delay={0.15} id="signin" className="glass max-w-md scroll-mt-6 rounded-[32px] border border-white/70 p-6 shadow-[var(--shadow-float)]">
-            <h2 className="mb-4 text-lg font-bold">Get started</h2>
+            <h2 className="mb-4 text-lg font-bold">Sign in or create an account</h2>
             {error && <p role="alert" className="mb-3 rounded-2xl bg-maroon-tint p-3 text-sm font-semibold text-maroon">{ERRORS[error] ?? "Sign-in didn't work. Try again."}</p>}
-            <SignInButtons google={providersAvailable.google} demo={providersAvailable.demo} />
+            <SignInButtons domain={studentDomain} devCodes={!emailConfigured} />
           </FadeIn>
         </div>
 

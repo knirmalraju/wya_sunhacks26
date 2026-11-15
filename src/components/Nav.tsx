@@ -25,7 +25,7 @@ export function Sidebar({ requests, me }: { requests: number; me: Me }) {
   const items = [...TABS, { href: "/requests", label: "Requests", icon: "bell" as const, badge: requests }, { href: "/settings", label: "Settings", icon: "gear" as const }];
   return (
     <aside className="glass sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-8 border-r border-line/80 px-4 py-7 md:flex">
-      <Link href="/" className="px-3"><Logo /></Link>
+      <Link href="/" aria-label="wya home" className="px-2"><Logo height={54} /></Link>
       <nav aria-label="Main" className="flex flex-col gap-1">
         {items.map((t) => {
           const on = isOn(path, t.href);

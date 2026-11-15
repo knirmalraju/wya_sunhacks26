@@ -1,4 +1,4 @@
-# Layover
+# wya
 
 Campus connection app for commuting ASU students: **interests + location + availability = connection**.
 
@@ -11,17 +11,16 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Until Google keys are added, a small "Developer login" link on the sign-in page and a "Developer mode" box on the verify page stand in for Google and ASU SSO. Both disappear once the keys are set. A seeded campus of ~36 students, events and group chats loads on first run, and new accounts get two incoming meetup requests and the demo group chats so every screen has something in it.
+Open http://localhost:3000. Sign in with any `.edu` email. Until an email service is set up, the 6-digit code shows up in the terminal running the dev server. A seeded campus of ~36 students, events and group chats loads on first run, and new accounts get two incoming meetup requests and the demo group chats so every screen has something in it.
 
 To reset the demo world, delete `data/db.json` and restart.
 
-## Sign-in flow (only verified students get in)
-1. **`/signin`: Continue with Google.** Any Google account.
-2. **`/verify`: Confirm you're a student.** "Continue with ASU SSO" is Google sign-in locked to `asu.edu` (`hd=asu.edu`), which ASU sends through its own SSO (ASURITE + Duo). The app reads only the verified school email and requires it to be `.edu` (set `REQUIRE_ASU=true` for `@asu.edu` only). "Log in with Canvas" also verifies, once a Canvas Developer Key is set.
-3. **`/welcome`: Profile.** The username is prefilled from the school email (`jdoe@asu.edu` → `jdoe`) and stays editable. After connecting Canvas there's also an "ASU ID from Canvas" option.
-4. **`/welcome/niches`: Niches.**
+## Sign-in (only students get in)
+1. **`/signin`: school email + code.** Enter your `.edu` email and wya emails a 6-digit code to that inbox. Type it in and you're signed in. A new email creates an account. Receiving the code proves you own a school account, so there are no passwords, no Google and no SSO. Codes expire after 10 minutes, allow 5 tries, and can be re-sent every 30 seconds. Only a hash is stored (`src/lib/emailCode.ts`). Set `REQUIRE_ASU=true` to allow `@asu.edu` only.
+2. **`/welcome`: Profile.** The username is prefilled from the email (`jdoe@asu.edu` → `jdoe`) and stays editable. After connecting Canvas there's also an "ASU ID from Canvas" option.
+3. **`/welcome/niches`: Niches.**
 
-Every app page checks steps 2 and 3 on the server (`requireUser` in `src/lib/auth.ts`).
+**Sending the emails:** add `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain you've verified in [Resend](https://resend.com)) to `.env.local`. Until then, codes are printed in the terminal running `npm run dev`, and the sign-in page says so.
 
 ## What's in it
 
@@ -44,22 +43,9 @@ Privacy rules live in `src/lib/view.ts`: friends = mutual follows; activity and 
 
 Copy these into `.env.local` (one is already created with `NEXTAUTH_SECRET`).
 
-### Google sign-in + ASU SSO verification
-1. Google Cloud Console → APIs & Services → Credentials → **Create OAuth client ID** (Web application).
-2. Authorized redirect URIs:
-   - `http://localhost:3000/api/auth/callback/google` (step 1)
-   - `http://localhost:3000/api/verify/callback` (step 2, ASU SSO)
-   - plus the same two on your deployed domain.
-3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. The developer login/verify options turn off automatically.
+### Canvas: login + MCP (optional, separate from wya sign-in) (`src/lib/canvas.ts`)
 
-Real ASU CAS/Shibboleth (instead of Google's `hd=asu.edu`) would need ASU to register the app.
-
-### Production build
-`npm run build`. To build while `npm run dev` is running, use a separate output folder: `NEXT_DIST_DIR=.next-build npm run build`.
-
-### Canvas: SSO sign-in + MCP (`src/lib/canvas.ts`)
-
-**1. Sign-in with ASU SSO (Canvas OAuth2).** "Log in with Canvas" sends the student to `canvas.asu.edu`, which signs them in through ASU SSO (ASURITE + Duo). Canvas sends back an access token and a refresh token, kept server-side.
+**1. "Log in with Canvas" (Canvas OAuth2).** "Log in with Canvas" sends the student to `canvas.asu.edu`, which signs them in through ASU SSO (ASURITE + Duo). Canvas sends back an access token and a refresh token, kept server-side.
 - Needs a **Canvas Developer Key** (API key) from ASU's Canvas admins. Ask ASU UTO / Canvas support for one with this redirect URI: `http://localhost:3000/api/canvas/callback` (plus your deployed URL).
 - Set `CANVAS_CLIENT_ID`, `CANVAS_CLIENT_SECRET`, and optionally `CANVAS_BASE_URL` (default `https://canvas.asu.edu`) and `CANVAS_OAUTH_SCOPES`.
 - Without a key, students can paste a personal access token instead (Canvas → Account → Settings → New access token), or skip for demo data.

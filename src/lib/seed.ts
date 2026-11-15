@@ -53,7 +53,7 @@ function makeUser(id: string, name: string, extra: Partial<User>): User {
     privacy: { ...DEFAULT_PRIVACY },
     canvas: { connected: true, via: "demo", courses: 5 },
     onboarded: true,
-    verified: { email, via: "sso", at: Date.now() },
+    verified: { email, via: "email", at: Date.now() },
     lastSeen: Date.now(),
     ...extra,
   };

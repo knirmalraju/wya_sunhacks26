@@ -40,8 +40,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           <span className="font-bold">{c?.connected ? `Canvas synced through ${via}` : "Bring in your Canvas deadlines"}</span>
           <span className="text-[13px] text-muted">
             {c?.connected
-              ? `${c.items?.length ?? 0} upcoming items · ${c.courses ?? 0} courses${c.auth === "sso" ? " · signed in with ASU SSO" : ""}${c.syncedAt ? ` · updated ${new Date(c.syncedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}. Only you can see these.`
-              : `Sign in to Canvas with ${oauthConfigured ? "ASU SSO" : "your account"} and we'll pull deadlines${mcpConfigured ? " through the Canvas MCP server" : ""}. Only you see them.`}
+              ? `${c.items?.length ?? 0} upcoming items · ${c.courses ?? 0} courses${c.auth === "sso" ? " · signed in through Canvas" : ""}${c.syncedAt ? ` · updated ${new Date(c.syncedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}` : ""}. Only you can see these.`
+              : `Sign in to Canvas and we'll pull deadlines${mcpConfigured ? " through the Canvas MCP server" : ""}. Only you see them.`}
           </span>
           {canvasError && <span role="alert" className="text-xs font-semibold text-maroon">{canvasError}</span>}
         </div>
@@ -53,7 +53,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         ) : (
           <form action={linkCanvas}>
             <input type="hidden" name="back" value="/calendar" />
-            <button className={btn.primary}><Icon name="lock" size={18} />{oauthConfigured ? "Log in with Canvas (ASU SSO)" : "Connect Canvas"}</button>
+            <button className={btn.primary}><Icon name="lock" size={18} />{oauthConfigured ? "Log in with Canvas" : "Connect Canvas"}</button>
           </form>
         )}
       </FadeIn>

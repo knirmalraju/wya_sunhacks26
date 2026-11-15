@@ -15,8 +15,8 @@ export default async function Welcome({ searchParams }: { searchParams: Promise<
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col gap-5 px-5 py-8">
       <div className="flex flex-col gap-2">
-        <span className="text-[13px] font-semibold text-muted">Step 2 of 3</span>
-        <div aria-hidden="true" className="h-1.5 rounded-full bg-line"><div className="h-full w-2/3 rounded-full bg-maroon" /></div>
+        <span className="text-[13px] font-semibold text-muted">Step 1 of 2</span>
+        <div aria-hidden="true" className="h-1.5 rounded-full bg-line"><div className="h-full w-1/2 rounded-full bg-maroon" /></div>
       </div>
       <h1 className="text-3xl font-extrabold tracking-[-0.03em]">Set up your account</h1>
       <p className="text-sm text-muted">Verified as <strong className="text-ink">{me.verified?.email ?? me.email}</strong></p>
@@ -26,7 +26,7 @@ export default async function Welcome({ searchParams }: { searchParams: Promise<
           <span aria-hidden="true" className="flex h-11 w-11 items-center justify-center rounded-2xl bg-ink text-white"><Icon name="book" size={20} /></span>
           <div className="flex flex-1 flex-col">
             <span className="text-[15px] font-bold">Connect Canvas</span>
-            <span className="text-xs text-muted">{oauthConfigured ? "Sign in with ASU SSO" : "Personal token or demo"}{mcpConfigured ? " · data through the Canvas MCP server" : ""}</span>
+            <span className="text-xs text-muted">{oauthConfigured ? "Log in with your Canvas account" : "Personal token or demo"}{mcpConfigured ? " · data through the Canvas MCP server" : ""}</span>
           </div>
           {me.canvas?.connected && <span className="rounded-full bg-ok-tint px-2.5 py-1 text-xs font-bold text-ok">Connected</span>}
         </div>
@@ -46,7 +46,7 @@ export default async function Welcome({ searchParams }: { searchParams: Promise<
               </div>
             )}
             {canvasError && <p role="alert" className="text-xs font-semibold text-maroon">{canvasError}</p>}
-            <button className={btn.dark}><Icon name="lock" size={18} />{oauthConfigured ? "Log in with Canvas (ASU SSO)" : "Connect Canvas"}</button>
+            <button className={btn.dark}><Icon name="lock" size={18} />{oauthConfigured ? "Log in with Canvas" : "Connect Canvas"}</button>
           </form>
         )}
       </section>

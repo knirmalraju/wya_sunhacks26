@@ -2,7 +2,7 @@ import Link from "next/link";
 import { sendRequest, setActive } from "@/app/actions";
 import { FadeIn, Item, Pulse, Stagger } from "@/components/motion";
 import { QuickConnect } from "@/components/QuickConnect";
-import { Avatar, Card, Eyebrow, Hidden, Icon, SectionTitle, Switch } from "@/components/ui";
+import { Avatar, Card, Eyebrow, Hidden, Icon, Logo, SectionTitle, Switch } from "@/components/ui";
 import { KIND_META, agenda } from "@/lib/agenda";
 import { requireUser } from "@/lib/auth";
 import { STATUSES, zoneName } from "@/lib/constants";
@@ -47,6 +47,7 @@ export default async function Home() {
 
   return (
     <div className="mx-auto flex max-w-[1240px] flex-col gap-7 px-4 py-6 md:px-10 md:py-9">
+      <div className="-mb-3 md:hidden"><Logo height={38} /></div>
       <FadeIn className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <Eyebrow>{new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })} · {fmtTime(Date.now())}</Eyebrow>

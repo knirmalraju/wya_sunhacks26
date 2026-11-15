@@ -150,7 +150,7 @@ type SyncResult = Omit<CanvasInfo, "connected" | "auth">;
 
 async function mcpClient(token: string): Promise<McpClient> {
   const { Client } = await import("@modelcontextprotocol/sdk/client/index.js");
-  const client = new Client({ name: "layover", version: "0.2.0" });
+  const client = new Client({ name: "wya", version: "0.2.0" });
   if (process.env.CANVAS_MCP_URL) {
     const { StreamableHTTPClientTransport } = await import("@modelcontextprotocol/sdk/client/streamableHttp.js");
     const headers: Record<string, string> = { Authorization: process.env.CANVAS_MCP_AUTH || `Bearer ${token}`, "X-Canvas-Token": token };

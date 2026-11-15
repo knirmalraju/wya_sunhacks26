@@ -5,7 +5,7 @@ import { username as fromEmail } from "./seed";
 // Marks someone as a verified student and, if their username still came from a
 // personal Google email, switches it to the one from their school email
 // (jdoe@asu.edu → jdoe) when that's free. They can still edit it later.
-export function markVerified(userId: string, email: string, via: "sso" | "canvas" | "demo") {
+export function markVerified(userId: string, email: string, via: "email" | "canvas" | "demo") {
   mutate(() => {
     const u = getUser(userId);
     if (!u) return;

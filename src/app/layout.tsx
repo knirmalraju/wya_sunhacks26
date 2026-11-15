@@ -7,7 +7,7 @@ import "./globals.css";
 const jakarta = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"], weight: ["400", "500", "600", "700", "800"] });
 
 export const metadata: Metadata = {
-  title: "Layover · Meet people between classes",
+  title: "wya · Meet people between classes",
   description: "Meet ASU students who share your niches, are on campus, and are free when you are.",
 };
 
