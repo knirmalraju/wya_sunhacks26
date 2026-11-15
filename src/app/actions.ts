@@ -5,20 +5,29 @@ import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { disconnectCanvas, oauthConfigured, saveSecret, syncCanvas } from "@/lib/canvas";
 import { ALL_NICHES, STATUSES, ZONES, zoneName } from "@/lib/constants";
-import { getUser, mutate } from "@/lib/db";
+import { flush, getUser, mutate } from "@/lib/db";
 import type { Privacy } from "@/lib/types";
 import { DAYS, fmtHour } from "@/lib/view";
 
 const id = () => Math.random().toString(36).slice(2, 10);
 const str = (f: FormData, k: string, max = 300) => String(f.get(k) ?? "").trim().slice(0, max);
-const done = () => revalidatePath("/", "layout");
+// Writes go to shared storage (Redis on Vercel); wait for them before the
+// page refreshes or moves on, or the next request could read old data.
+const done = async () => {
+  await flush();
+  revalidatePath("/", "layout");
+};
+const go = async (url: string): Promise<never> => {
+  await flush();
+  redirect(url);
+};
 
 // ---------- Activity, status, Quick Connect ----------
 
 export async function setActive(f: FormData) {
   const me = await requireUser();
   mutate(() => { me.active = f.get("value") === "on"; });
-  done();
+  await done();
 }
 
 export async function setStatus(f: FormData) {
@@ -31,7 +40,7 @@ export async function setStatus(f: FormData) {
     else me.active = true;
     if (s !== "available") me.available = false;
   });
-  done();
+  await done();
 }
 
 export async function setOnCampus(f: FormData) {
@@ -41,7 +50,7 @@ export async function setOnCampus(f: FormData) {
     if (!me.onCampus) me.zone = "off";
     else if (me.zone === "off") me.zone = "mu";
   });
-  done();
+  await done();
 }
 
 export async function postQuickConnect(f: FormData) {
@@ -58,7 +67,7 @@ export async function postQuickConnect(f: FormData) {
     me.zone = zone;
     me.post = { text: str(f, "text", 200) || "Free and around. Say hi!", zone, onCampus, createdAt: Date.now(), freeUntil: Date.now() + mins * 60000 };
   });
-  done();
+  await done();
 }
 
 export async function setAvailable(f: FormData) {
@@ -67,7 +76,7 @@ export async function setAvailable(f: FormData) {
     me.available = f.get("value") === "on";
     if (!me.available) me.post = null;
   });
-  done();
+  await done();
 }
 
 // ---------- Follows, requests ----------
@@ -81,7 +90,7 @@ export async function toggleFollow(f: FormData) {
     if (i >= 0) d.follows.splice(i, 1);
     else d.follows.push({ from: me.id, to });
   });
-  done();
+  await done();
 }
 
 export async function sendRequest(f: FormData) {
@@ -105,7 +114,7 @@ export async function sendRequest(f: FormData) {
       createdAt: Date.now(),
     });
   });
-  done();
+  await done();
 }
 
 export async function respondRequest(f: FormData) {
@@ -125,7 +134,7 @@ export async function respondRequest(f: FormData) {
       chat.messages.push({ id: id(), from: me.id, text: `Accepted: ${r.when} at ${zoneName(r.zone)}. See you there!`, at: Date.now() });
     }
   });
-  done();
+  await done();
 }
 
 // ---------- Events ----------
@@ -140,7 +149,7 @@ export async function toggleRsvp(f: FormData) {
     if (i >= 0) e.attendees.splice(i, 1);
     else if (e.attendees.length < e.capacity) e.attendees.push(me.id);
   });
-  done();
+  await done();
 }
 
 export async function createEvent(f: FormData) {
@@ -151,8 +160,8 @@ export async function createEvent(f: FormData) {
   mutate((d) => {
     d.events.push({ id: id(), hostId: me.id, title, type: str(f, "type", 20) || "Hangout", zone: str(f, "zone") || "mu", startsAt: when, capacity: Math.max(2, Math.min(200, Number(f.get("capacity")) || 8)), attendees: [me.id] });
   });
-  done();
-  redirect("/discover?tab=events");
+  await done();
+  await go("/discover?tab=events");
 }
 
 // ---------- Messages + shared calendar ----------
@@ -166,7 +175,7 @@ export async function sendMessage(f: FormData) {
     const c = d.chats.find((x) => x.id === cid && x.members.includes(me.id));
     c?.messages.push({ id: id(), from: me.id, text, at: Date.now() });
   });
-  done();
+  await done();
 }
 
 export async function addCalendarItem(f: FormData) {
@@ -181,7 +190,7 @@ export async function addCalendarItem(f: FormData) {
     c.calendar.push({ id: id(), title, startsAt: when, zone: str(f, "zone") || "mu", going: [me.id], addedBy: me.id });
     c.messages.push({ id: id(), from: me.id, text: `Added “${title}” to the shared calendar`, at: Date.now() });
   });
-  done();
+  await done();
 }
 
 export async function toggleGoing(f: FormData) {
@@ -195,7 +204,7 @@ export async function toggleGoing(f: FormData) {
     if (i >= 0) k.going.splice(i, 1);
     else k.going.push(me.id);
   });
-  done();
+  await done();
 }
 
 export async function openDm(f: FormData) {
@@ -210,7 +219,7 @@ export async function openDm(f: FormData) {
     }
     return c.id;
   });
-  redirect(`/map?chat=${chatId}`);
+  await go(`/map?chat=${chatId}`);
 }
 
 // ---------- Profile, privacy, onboarding ----------
@@ -226,7 +235,7 @@ export async function updatePrivacy(f: FormData) {
       (me.privacy as Record<string, unknown>)[key] = f.get("value") === "on";
     }
   });
-  done();
+  await done();
 }
 
 export async function saveAccount(f: FormData) {
@@ -242,10 +251,10 @@ export async function saveAccount(f: FormData) {
       if (f.has(k)) me[k] = str(f, k, k === "bio" ? 160 : 60);
     }
   });
-  done();
+  await done();
   const next = str(f, "next");
-  if (error) redirect(`${next || "/account/edit"}?error=${error}`);
-  if (next) redirect(next);
+  if (error) await go(`${next || "/account/edit"}?error=${error}`);
+  if (next) await go(next);
 }
 
 // "Log in with Canvas" (SSO) when a Developer Key is configured; otherwise a
@@ -254,7 +263,7 @@ export async function linkCanvas(f: FormData) {
   const me = await requireUser({ allowUnfinished: true });
   const back = str(f, "back") || "/welcome";
   const token = str(f, "token", 500);
-  if (oauthConfigured && !token) redirect(`/api/canvas/connect?back=${encodeURIComponent(back)}`);
+  if (oauthConfigured && !token) await go(`/api/canvas/connect?back=${encodeURIComponent(back)}`);
   let error = "";
   try {
     if (token) saveSecret(me.id, { access: token });
@@ -263,8 +272,8 @@ export async function linkCanvas(f: FormData) {
     if (token) saveSecret(me.id, null);
     error = e instanceof Error ? e.message : "Could not reach Canvas";
   }
-  done();
-  redirect(error ? `${back}?canvasError=${encodeURIComponent(error.slice(0, 160))}` : back);
+  await done();
+  await go(error ? `${back}?canvasError=${encodeURIComponent(error.slice(0, 160))}` : back);
 }
 
 export async function resyncCanvas(f: FormData) {
@@ -276,14 +285,14 @@ export async function resyncCanvas(f: FormData) {
   } catch (e) {
     error = e instanceof Error ? e.message : "Could not reach Canvas";
   }
-  done();
-  if (error) redirect(`${back}?canvasError=${encodeURIComponent(error.slice(0, 160))}`);
+  await done();
+  if (error) await go(`${back}?canvasError=${encodeURIComponent(error.slice(0, 160))}`);
 }
 
 export async function unlinkCanvas() {
   const me = await requireUser();
   disconnectCanvas(me.id);
-  done();
+  await done();
 }
 
 export async function saveInterests(f: FormData) {
@@ -295,8 +304,8 @@ export async function saveInterests(f: FormData) {
     me.interests = list.slice(0, 20);
     me.onboarded = true;
   });
-  done();
-  redirect(str(f, "next") || "/");
+  await done();
+  await go(str(f, "next") || "/");
 }
 
 export async function addSlot(f: FormData) {
@@ -306,13 +315,13 @@ export async function addSlot(f: FormData) {
   const end = Number(f.get("end"));
   if (!(day >= 0 && day <= 6 && end > start)) return;
   mutate(() => { me.slots.push({ id: id(), day, start, end, zone: str(f, "zone") || "mu" }); });
-  done();
+  await done();
 }
 
 export async function removeSlot(f: FormData) {
   const me = await requireUser();
   const sid = str(f, "id");
   mutate(() => { me.slots = me.slots.filter((s) => s.id !== sid); });
-  done();
+  await done();
 }
 

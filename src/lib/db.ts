@@ -1,16 +1,63 @@
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
+import { after } from "next/server";
 import { buildSeed, welcomeData, username as usernameFromEmail } from "./seed";
 import { DEFAULT_PRIVACY, type DB, type User } from "./types";
 
-// A tiny JSON-file database. Good for a hackathon demo on one server;
-// swap for Postgres/Supabase before real launch (see README).
-const FILE = path.join(process.cwd(), "data", "db.json");
+// A tiny JSON database. Locally it's a file in data/. On Vercel every request
+// can land on a different serverless instance with its own memory, so the data
+// lives in Redis (Upstash, via the Vercel Marketplace) when it's configured.
+// /tmp is the fallback there, but it isn't shared between instances.
+const FILE = process.env.DB_FILE || (process.env.VERCEL ? "/tmp/wya/db.json" : path.join(process.cwd(), "data", "db.json"));
 const DAY = 24 * 3600 * 1000;
 
+const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const REDIS_KEY = process.env.DB_KEY || "wya:db";
+export const sharedStore = Boolean(REDIS_URL && REDIS_TOKEN);
+
 type Stored = { seededAt: number; db: DB };
-const g = globalThis as unknown as { __layover?: Stored };
+const g = globalThis as unknown as { __layover?: Stored; __wyaPending?: Promise<void> };
+
+async function redis(cmd: unknown[]) {
+  const res = await fetch(REDIS_URL!, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${REDIS_TOKEN}`, "Content-Type": "application/json" },
+    body: JSON.stringify(cmd),
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Redis ${res.status}: ${(await res.text()).slice(0, 200)}`);
+  return (await res.json()).result as unknown;
+}
+
+// Pull the latest copy from shared storage. Call once at the start of a request
+// (currentUser does this), before reading or changing anything.
+export async function hydrate() {
+  if (!sharedStore) return;
+  await flush();
+  try {
+    const raw = await redis(["GET", REDIS_KEY]);
+    if (typeof raw === "string") {
+      const stored = JSON.parse(raw) as Stored;
+      g.__layover = stored;
+      freshen(stored);
+    } else if (!g.__layover) {
+      load();
+    }
+  } catch (e) {
+    console.error("wya: couldn't load db from Redis", e);
+  }
+}
+
+// Wait for the last write to reach shared storage.
+export async function flush() {
+  while (g.__wyaPending) {
+    const p = g.__wyaPending;
+    await p;
+    if (g.__wyaPending === p) g.__wyaPending = undefined;
+  }
+}
 
 function load(): Stored {
   if (g.__layover) return g.__layover;
@@ -28,8 +75,28 @@ function load(): Stored {
 
 export function save() {
   if (!g.__layover) return;
-  fs.mkdirSync(path.dirname(FILE), { recursive: true });
-  fs.writeFileSync(FILE, JSON.stringify(g.__layover));
+  if (sharedStore) {
+    const body = JSON.stringify(g.__layover);
+    const prev = g.__wyaPending ?? Promise.resolve();
+    g.__wyaPending = prev
+      .then(() => redis(["SET", REDIS_KEY, body]))
+      .then(() => undefined)
+      .catch((e) => console.error("wya: couldn't save db to Redis", e));
+    // Keep the serverless function alive until the write lands.
+    try {
+      after(() => flush());
+    } catch {
+      /* outside a request: nothing to keep alive */
+    }
+    return;
+  }
+  try {
+    fs.mkdirSync(path.dirname(FILE), { recursive: true });
+    fs.writeFileSync(FILE, JSON.stringify(g.__layover));
+  } catch (e) {
+    // Never let a failed disk write break a request; the in-memory copy still works.
+    console.error("wya: couldn't save db", e);
+  }
 }
 
 // Keeps the demo world feeling live: seeded events move forward by whole days,

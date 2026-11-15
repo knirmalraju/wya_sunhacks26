@@ -20,6 +20,19 @@ To reset the demo world, delete `data/db.json` and restart.
 
 There's no email, password or student check, so anyone with the link can join. That's fine for a demo. Before a real launch, put a real sign-in back (e.g. school email + one-time code). Clearing browser data on a device means starting a new account.
 
+## Deploying to Vercel
+
+Vercel runs the app on many short-lived instances that don't share memory or disk,
+so the data needs shared storage or sign-in won't stick:
+
+1. In your Vercel project, open **Storage → Create Database → Upstash (Redis)**, pick the free plan, and connect it to this project.
+   That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` (the app also accepts `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`).
+2. Make sure `NEXTAUTH_SECRET` is set (any long random string) and `NEXTAUTH_URL` is your site URL.
+3. Redeploy.
+
+Without Redis the app falls back to `/tmp`, which only works within one instance.
+Locally nothing changes: data stays in `data/db.json`.
+
 ## What's in it
 
 | Screen | Path | Notes |

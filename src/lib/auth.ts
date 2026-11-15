@@ -2,7 +2,7 @@ import "server-only";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { redirect } from "next/navigation";
-import { getUser, upsertDeviceUser } from "./db";
+import { flush, getUser, hydrate, upsertDeviceUser } from "./db";
 
 // Sign-in is one button. The browser keeps a random device id (localStorage)
 // and sends it on sign-in; each device id is one account, so the same browser
@@ -18,7 +18,9 @@ export const authOptions: NextAuthOptions = {
       async authorize(creds) {
         const device = String(creds?.device || "").trim().toLowerCase();
         if (!/^[a-z0-9-]{16,64}$/.test(device)) return null;
+        await hydrate();
         const user = upsertDeviceUser(device);
+        await flush();
         return { id: user.id, name: user.name };
       },
     }),
@@ -40,7 +42,9 @@ export const authOptions: NextAuthOptions = {
 export async function currentUser() {
   const session = await getServerSession(authOptions);
   const uid = (session as { uid?: string } | null)?.uid;
-  return uid ? getUser(uid) : null;
+  if (!uid) return null;
+  await hydrate();
+  return getUser(uid);
 }
 
 // For pages behind sign-in. New accounts finish setup first.

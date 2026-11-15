@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { currentUser } from "@/lib/auth";
 import { exchangeCode, saveSecret, syncCanvas } from "@/lib/canvas";
+import { flush } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const origin = process.env.NEXTAUTH_URL || req.nextUrl.origin;
@@ -17,6 +18,7 @@ export async function GET(req: NextRequest) {
   try {
     saveSecret(me.id, await exchangeCode(code, `${origin}/api/canvas/callback`));
     await syncCanvas(me.id, "sso");
+    await flush();
   } catch (e) {
     return fail(e instanceof Error ? e.message.slice(0, 160) : "Couldn't reach Canvas.");
   }
