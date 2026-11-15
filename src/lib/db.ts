@@ -12,23 +12,87 @@ import { DEFAULT_PRIVACY, type DB, type User } from "./types";
 const FILE = process.env.DB_FILE || (process.env.VERCEL ? "/tmp/wya/db.json" : path.join(process.cwd(), "data", "db.json"));
 const DAY = 24 * 3600 * 1000;
 
-const REDIS_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
-const REDIS_KEY = process.env.DB_KEY || "wya:db";
-export const sharedStore = Boolean(REDIS_URL && REDIS_TOKEN);
+// Find Redis settings however the Vercel integration named them:
+// Upstash REST (KV_REST_API_URL + KV_REST_API_TOKEN, UPSTASH_REDIS_REST_URL + _TOKEN,
+// possibly with a custom prefix) or a plain connection string (REDIS_URL, KV_URL).
+const env = process.env;
+const envKeys = Object.keys(env);
+function findRest() {
+  for (const k of envKeys) {
+    const m = k.match(/^(.*?)(KV_REST_API|REDIS_REST)_URL$/);
+    if (!m || !env[k]?.startsWith("http")) continue;
+    const token = env[`${m[1]}${m[2]}_TOKEN`];
+    if (token) return { url: env[k]!, token };
+  }
+  return null;
+}
+function findTcp() {
+  const k = envKeys.find((k) => /(^|_)(REDIS_URL|KV_URL)$/.test(k) && /^rediss?:\/\//.test(env[k] || ""));
+  return k ? env[k]! : null;
+}
+const REST = findRest();
+const TCP = REST ? null : findTcp();
+const REDIS_KEY = env.DB_KEY || "wya:db";
+export const sharedStore = Boolean(REST || TCP);
+export const storeKind = REST ? "redis-rest" : TCP ? "redis-url" : env.VERCEL ? "tmp (not shared)" : "file";
 
 type Stored = { seededAt: number; db: DB };
-const g = globalThis as unknown as { __layover?: Stored; __wyaPending?: Promise<void> };
+type TcpClient = { isOpen: boolean; connect(): Promise<unknown>; get(k: string): Promise<string | null>; set(k: string, v: string): Promise<unknown> };
+const g = globalThis as unknown as { __layover?: Stored; __wyaPending?: Promise<void>; __wyaRedis?: Promise<TcpClient> };
 
-async function redis(cmd: unknown[]) {
-  const res = await fetch(REDIS_URL!, {
+async function tcp(): Promise<TcpClient> {
+  if (!g.__wyaRedis) {
+    g.__wyaRedis = (async () => {
+      const { createClient } = await import("redis");
+      const client = createClient({ url: TCP!, socket: { connectTimeout: 5000 } }) as unknown as TcpClient & { on(e: string, f: (e: unknown) => void): void };
+      client.on("error", (e) => console.error("wya: redis error", e));
+      await client.connect();
+      return client;
+    })().catch((e) => {
+      g.__wyaRedis = undefined;
+      throw e;
+    });
+  }
+  const c = await g.__wyaRedis;
+  if (!c.isOpen) await c.connect();
+  return c;
+}
+
+async function redisGet(key: string): Promise<string | null> {
+  if (TCP) return (await tcp()).get(key);
+  const r = await redisRest(["GET", key]);
+  return typeof r === "string" ? r : null;
+}
+
+async function redisSet(key: string, value: string) {
+  if (TCP) await (await tcp()).set(key, value);
+  else await redisRest(["SET", key, value]);
+}
+
+async function redisRest(cmd: unknown[]) {
+  const res = await fetch(REST!.url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${REDIS_TOKEN}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${REST!.token}`, "Content-Type": "application/json" },
     body: JSON.stringify(cmd),
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Redis ${res.status}: ${(await res.text()).slice(0, 200)}`);
   return (await res.json()).result as unknown;
+}
+
+// For /api/health: which storage is active and whether it answers.
+export async function storeStatus() {
+  const names = envKeys.filter((k) => /KV|REDIS|UPSTASH/.test(k)).sort();
+  let reachable: boolean | string = "n/a";
+  if (sharedStore) {
+    try {
+      await redisSet("wya:ping", String(Date.now()));
+      reachable = (await redisGet("wya:ping")) !== null;
+    } catch (e) {
+      reachable = e instanceof Error ? e.message.slice(0, 200) : "error";
+    }
+  }
+  return { store: storeKind, reachable, redisEnvNames: names, vercel: Boolean(env.VERCEL), nextauthSecret: Boolean(env.NEXTAUTH_SECRET) };
 }
 
 // Pull the latest copy from shared storage. Call once at the start of a request
@@ -37,7 +101,7 @@ export async function hydrate() {
   if (!sharedStore) return;
   await flush();
   try {
-    const raw = await redis(["GET", REDIS_KEY]);
+    const raw = await redisGet(REDIS_KEY);
     if (typeof raw === "string") {
       const stored = JSON.parse(raw) as Stored;
       g.__layover = stored;
@@ -79,7 +143,7 @@ export function save() {
     const body = JSON.stringify(g.__layover);
     const prev = g.__wyaPending ?? Promise.resolve();
     g.__wyaPending = prev
-      .then(() => redis(["SET", REDIS_KEY, body]))
+      .then(() => redisSet(REDIS_KEY, body))
       .then(() => undefined)
       .catch((e) => console.error("wya: couldn't save db to Redis", e));
     // Keep the serverless function alive until the write lands.

@@ -30,6 +30,10 @@ so the data needs shared storage or sign-in won't stick:
 2. Make sure `NEXTAUTH_SECRET` is set (any long random string) and `NEXTAUTH_URL` is your site URL.
 3. Redeploy.
 
+Vercel's **Redis** integration (a single `REDIS_URL`) works too, and so do prefixed names like `STORAGE_KV_REST_API_URL`.
+To check, open `/api/health` on your site: `store` should be `redis-rest` or `redis-url` and `reachable` should be `true`.
+It lists variable names only, never values.
+
 Without Redis the app falls back to `/tmp`, which only works within one instance.
 Locally nothing changes: data stays in `data/db.json`.
 
