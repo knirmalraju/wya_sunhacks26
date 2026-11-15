@@ -1,26 +1,113 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* "Sun Devil Pulse" design system: porcelain surfaces, ASU maroon + sun gold,
+   emerald presence, pill geometry, frosted glass for floating layers. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-maroon: #8c1d40;
+  --color-maroon-dark: #6c002a;
+  --color-maroon-tint: #fce8ef;
+  --color-gold: #ffc627;
+  --color-gold-tint: #fff7db;
+  --color-ink: #0f172a;
+  --color-muted: #55657a;
+  --color-ground: #f8fafc;
+  --color-line: #e2e8f0;
+  --color-line-strong: #cbd5e1;
+  --color-ok: #047857;
+  --color-ok-dot: #10b981;
+  --color-ok-tint: #d1fae5;
+  --color-blue: #1d4e89;
+  --color-blue-tint: #e0ecfb;
+  --color-amber: #b45309;
+  --font-sans: var(--font-jakarta), system-ui, sans-serif;
+  --font-display: var(--font-jakarta), system-ui, sans-serif;
+  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06);
+  --shadow-float: 0 8px 30px rgba(15, 23, 42, 0.12);
+  --shadow-sheet: 0 16px 40px rgba(15, 23, 42, 0.2);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.glass {
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  backdrop-filter: blur(16px) saturate(1.4);
+}
+
+/* Soft campus-glow behind the app canvas (not a gradient wash: two faint blurred dots). */
+.canvas-glow {
+  background:
+    radial-gradient(600px 400px at 85% -10%, rgba(140, 29, 64, 0.07), transparent 70%),
+    radial-gradient(500px 360px at -10% 30%, rgba(255, 198, 39, 0.08), transparent 70%),
+    #f8fafc;
+}
+
+.leaflet-container {
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 20px;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.12);
+}
+
+/* Free-time slider: fixed 20px thumb so the tick marks above line up with it. */
+.time-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  cursor: pointer;
+}
+.time-range::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 999px;
+  background: linear-gradient(to right, #ffc627 var(--fill, 0%), rgba(255, 255, 255, 0.25) var(--fill, 0%));
+}
+.time-range::-moz-range-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+}
+.time-range::-moz-range-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: #ffc627;
+}
+.time-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  margin-top: -7px;
+  border-radius: 50%;
+  background: #ffc627;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3);
+}
+.time-range::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #ffc627;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.3);
+}
+
+:focus-visible {
+  outline: 2px solid #8c1d40;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
