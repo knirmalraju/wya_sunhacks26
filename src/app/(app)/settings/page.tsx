@@ -127,16 +127,6 @@ export default async function Settings({ searchParams }: { searchParams: Promise
           <section id="connections" className="flex scroll-mt-6 flex-col gap-3">
             <h2 className="text-[22px] font-bold tracking-[-0.015em]">Connections</h2>
             <Card className="divide-y divide-line/70">
-              <div className="flex items-center gap-3 px-5 py-4">
-                <span className="flex flex-1 flex-col"><span className="text-[15px] font-semibold">School email</span><span className="text-xs text-muted">{me.email}</span></span>
-              </div>
-              <div className="flex items-center gap-3 px-5 py-4">
-                <span className="flex flex-1 flex-col">
-                  <span className="text-[15px] font-semibold">Student verification</span>
-                  <span className="text-xs text-muted">{me.verified ? `${me.verified.email} · verified ${me.verified.via === "canvas" ? "through Canvas" : "with an emailed code"}` : "Not verified"}</span>
-                </span>
-                {me.verified && <span className="flex items-center gap-1 rounded-full bg-ok-tint px-2.5 py-1 text-xs font-bold text-ok"><Icon name="check" size={14} />Verified</span>}
-              </div>
               <div className="flex flex-wrap items-center gap-3 px-5 py-4">
                 <span className="flex min-w-40 flex-1 flex-col">
                   <span className="text-[15px] font-semibold">Canvas</span>

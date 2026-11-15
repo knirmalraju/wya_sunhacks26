@@ -2,14 +2,12 @@ import { linkCanvas, saveAccount } from "@/app/actions";
 import { Icon, btn, field, Select } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { mcpConfigured, oauthConfigured } from "@/lib/canvas";
-import { username as fromEmail } from "@/lib/seed";
 import { UsernameField } from "./UsernameField";
 
 export default async function Welcome({ searchParams }: { searchParams: Promise<{ error?: string; canvasError?: string }> }) {
   const me = await requireUser({ allowUnfinished: true });
   const { error, canvasError } = await searchParams;
-  const school = me.verified?.email.includes("@") ? me.verified.email : me.email;
-  const suggestions = [{ value: fromEmail(school), label: `${fromEmail(school)} · from your school email (recommended)` }];
+  const suggestions: { value: string; label: string }[] = [];
   if (me.canvas?.asuId && me.canvas.asuId !== "unknown") suggestions.push({ value: me.canvas.asuId, label: "ASU ID from Canvas" });
 
   return (
@@ -19,7 +17,7 @@ export default async function Welcome({ searchParams }: { searchParams: Promise<
         <div aria-hidden="true" className="h-1.5 rounded-full bg-line"><div className="h-full w-1/2 rounded-full bg-maroon" /></div>
       </div>
       <h1 className="text-3xl font-extrabold tracking-[-0.03em]">Set up your account</h1>
-      <p className="text-sm text-muted">Verified as <strong className="text-ink">{me.verified?.email ?? me.email}</strong></p>
+      <p className="text-sm text-muted">Pick a name and username so friends can find you.</p>
 
       <section aria-label="Connect Canvas" className="flex flex-col gap-3 rounded-[28px] border border-line/80 bg-white p-5 shadow-[var(--shadow-card)]">
         <div className="flex items-center gap-3">
@@ -55,7 +53,7 @@ export default async function Welcome({ searchParams }: { searchParams: Promise<
         <input type="hidden" name="next" value="/welcome/niches" />
         <div className="flex flex-col gap-1.5">
           <label htmlFor="name" className="text-[13px] font-semibold">Full name</label>
-          <input id="name" name="name" defaultValue={me.name} className="min-h-12 rounded-2xl border border-line-strong bg-white px-3.5" />
+          <input id="name" name="name" required placeholder="Jon Doe" defaultValue={me.name === "New student" ? "" : me.name} className="min-h-12 rounded-2xl border border-line-strong bg-white px-3.5" />
         </div>
         <UsernameField initial={me.username} suggestions={suggestions} />
         {error === "taken" && <p role="alert" className="text-sm font-semibold text-maroon">That username is taken. Try another.</p>}

@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { isStudentEmail, requireUser } from "@/lib/auth";
-import { sendCode } from "@/lib/emailCode";
+import { requireUser } from "@/lib/auth";
 import { disconnectCanvas, oauthConfigured, saveSecret, syncCanvas } from "@/lib/canvas";
 import { ALL_NICHES, STATUSES, ZONES, zoneName } from "@/lib/constants";
 import { getUser, mutate } from "@/lib/db";
@@ -317,11 +316,3 @@ export async function removeSlot(f: FormData) {
   done();
 }
 
-// ---------- Sign-in ----------
-
-// Step 1 of sign-in: email a 6-digit code to a school address. Public (no session needed).
-export async function requestSignInCode(rawEmail: string): Promise<{ ok: boolean; error?: string }> {
-  const email = String(rawEmail ?? "").trim().toLowerCase().slice(0, 120);
-  if (!isStudentEmail(email)) return { ok: false, error: "Use your school email. It ends in .edu." };
-  return sendCode(email);
-}

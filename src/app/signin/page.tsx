@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
 import { FadeIn, Float, Item, Pulse, Stagger } from "@/components/motion";
 import { Avatar, Chip, Icon, Logo } from "@/components/ui";
-import { currentUser, studentDomain } from "@/lib/auth";
-import { emailConfigured } from "@/lib/emailCode";
+import { currentUser } from "@/lib/auth";
 import { SignInButtons } from "./SignInButtons";
 
 const ERRORS: Record<string, string> = {
-  CredentialsSignin: "That code didn't work. Send a new one and try again.",
+  CredentialsSignin: "Couldn't sign you in. Try again.",
 };
 
 const FEATURES = [
@@ -17,7 +16,7 @@ const FEATURES = [
 
 export default async function SignIn({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const me = await currentUser();
-  if (me?.verified) redirect(me.onboarded ? "/" : "/welcome");
+  if (me) redirect(me.onboarded ? "/" : "/welcome");
   const { error } = await searchParams;
   return (
     <div className="canvas-glow min-h-screen">
@@ -44,9 +43,9 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
             </p>
           </FadeIn>
           <FadeIn delay={0.15} id="signin" className="glass max-w-md scroll-mt-6 rounded-[32px] border border-white/70 p-6 shadow-[var(--shadow-float)]">
-            <h2 className="mb-4 text-lg font-bold">Sign in or create an account</h2>
+            <h2 className="mb-4 text-lg font-bold">Get started</h2>
             {error && <p role="alert" className="mb-3 rounded-2xl bg-maroon-tint p-3 text-sm font-semibold text-maroon">{ERRORS[error] ?? "Sign-in didn't work. Try again."}</p>}
-            <SignInButtons domain={studentDomain} devCodes={!emailConfigured} />
+            <SignInButtons />
           </FadeIn>
         </div>
 
@@ -97,7 +96,7 @@ export default async function SignIn({ searchParams }: { searchParams: Promise<{
             </Item>
           ))}
         </Stagger>
-        <p className="mt-8 flex items-center justify-center gap-2 text-center text-[13px] text-muted"><Icon name="lock" size={16} />Only verified students get in. Location and activity are opt-in, and you control every setting.</p>
+        <p className="mt-8 flex items-center justify-center gap-2 text-center text-[13px] text-muted"><Icon name="lock" size={16} />Location and activity are opt-in, and you control every setting.</p>
       </section>
     </div>
   );

@@ -3,13 +3,11 @@ import { saveAccount } from "@/app/actions";
 import { btn } from "@/components/ui";
 import { UsernameField } from "@/app/welcome/UsernameField";
 import { requireUser } from "@/lib/auth";
-import { username as fromEmail } from "@/lib/seed";
 
 export default async function EditAccount({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const me = await requireUser();
   const { error } = await searchParams;
-  const school = me.verified?.email.includes("@") ? me.verified.email : me.email;
-  const suggestions = [{ value: fromEmail(school), label: `${fromEmail(school)} · from your school email (recommended)` }];
+  const suggestions: { value: string; label: string }[] = [];
   if (me.canvas?.asuId && me.canvas.asuId !== "unknown") suggestions.push({ value: me.canvas.asuId, label: "ASU ID from Canvas" });
   const field = "min-h-12 rounded-2xl border border-line-strong bg-white px-3.5";
   return (

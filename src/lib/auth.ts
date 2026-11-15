@@ -2,39 +2,28 @@ import "server-only";
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { redirect } from "next/navigation";
-import { getUser, upsertUserFromSignIn } from "./db";
-import { checkCode } from "./emailCode";
-import { markVerified } from "./verify";
+import { getUser, upsertDeviceUser } from "./db";
 
-// Sign-in: school email + one-time code. The person enters their .edu email,
-// we email a 6-digit code to that inbox (src/lib/emailCode.ts), and they type
-// it back. Getting the code proves they own a school account, so only
-// students get in. No passwords, no Google, no SSO.
-
-export const studentDomain = process.env.ASU_DOMAIN || "asu.edu";
-
-export function isStudentEmail(email: string) {
-  const e = email.trim().toLowerCase();
-  return process.env.REQUIRE_ASU === "true" ? e.endsWith("@" + studentDomain) : /^[^@\s]+@([a-z0-9-]+\.)*[a-z0-9-]+\.edu$/.test(e);
-}
+// Sign-in is one button. The browser keeps a random device id (localStorage)
+// and sends it on sign-in; each device id is one account, so the same browser
+// always comes back to the same profile. There's no email, password or SSO,
+// which means anyone with the link can join (fine for a demo).
 
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      id: "email-code",
-      name: "School email",
-      credentials: { email: { label: "Email", type: "email" }, code: { label: "Code", type: "text" } },
+      id: "device",
+      name: "Get started",
+      credentials: { device: { label: "Device", type: "text" } },
       async authorize(creds) {
-        const email = String(creds?.email || "").trim().toLowerCase();
-        const code = String(creds?.code || "").trim();
-        if (!isStudentEmail(email) || !checkCode(email, code)) return null;
-        const user = upsertUserFromSignIn(email, null);
-        if (!user.verified) markVerified(user.id, email, "email");
-        return { id: user.id, email: user.email, name: user.name };
+        const device = String(creds?.device || "").trim().toLowerCase();
+        if (!/^[a-z0-9-]{16,64}$/.test(device)) return null;
+        const user = upsertDeviceUser(device);
+        return { id: user.id, name: user.name };
       },
     }),
   ],
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 365 },
   pages: { signIn: "/signin", error: "/signin" },
   callbacks: {
     async jwt({ token, user }) {
@@ -54,10 +43,10 @@ export async function currentUser() {
   return uid ? getUser(uid) : null;
 }
 
-// For pages behind sign-in. Anyone without a verified school email signs in again.
+// For pages behind sign-in. New accounts finish setup first.
 export async function requireUser(opts: { allowUnfinished?: boolean } = {}) {
   const me = await currentUser();
-  if (!me || !me.verified) redirect("/signin");
+  if (!me) redirect("/signin");
   if (!me.onboarded && !opts.allowUnfinished) redirect("/welcome");
   me.lastSeen = Date.now();
   return me;

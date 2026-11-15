@@ -130,6 +130,25 @@ export function upsertUserFromSignIn(email: string, name?: string | null): User 
   });
 }
 
+// One-button sign-in: one account per browser device id. The internal email is
+// never shown; the person picks their name and username during setup.
+export function upsertDeviceUser(device: string): User {
+  const key = `${device}@device.wya`;
+  const existing = getUserByEmail(key);
+  if (existing) return existing;
+  const user = upsertUserFromSignIn(key, "New student");
+  mutate((d) => {
+    let uname = `student${Math.floor(1000 + Math.random() * 9000)}`;
+    while (d.users.some((u) => u.username === uname && u.id !== user.id)) uname = `student${Math.floor(1000 + Math.random() * 9000)}`;
+    user.username = uname;
+  });
+  return user;
+}
+
+export function isDeviceAccount(email: string) {
+  return email.endsWith("@device.wya");
+}
+
 export function followers(id: string) {
   return db().follows.filter((f) => f.to === id).map((f) => f.from);
 }

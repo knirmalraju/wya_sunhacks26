@@ -11,16 +11,14 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000. Sign in with any `.edu` email. Until an email service is set up, the 6-digit code shows up in the terminal running the dev server. A seeded campus of ~36 students, events and group chats loads on first run, and new accounts get two incoming meetup requests and the demo group chats so every screen has something in it.
+Open http://localhost:3000. Click **Get started** to sign in. A seeded campus of ~36 students, events and group chats loads on first run, and new accounts get two incoming meetup requests and the demo group chats so every screen has something in it.
 
 To reset the demo world, delete `data/db.json` and restart.
 
-## Sign-in (only students get in)
-1. **`/signin`: school email + code.** Enter your `.edu` email and wya emails a 6-digit code to that inbox. Type it in and you're signed in. A new email creates an account. Receiving the code proves you own a school account, so there are no passwords, no Google and no SSO. Codes expire after 10 minutes, allow 5 tries, and can be re-sent every 30 seconds. Only a hash is stored (`src/lib/emailCode.ts`). Set `REQUIRE_ASU=true` to allow `@asu.edu` only.
-2. **`/welcome`: Profile.** The username is prefilled from the email (`jdoe@asu.edu` → `jdoe`) and stays editable. After connecting Canvas there's also an "ASU ID from Canvas" option.
-3. **`/welcome/niches`: Niches.**
+## Sign-in: one button
+`/signin` has a single **Get started** button. The browser keeps a random device id in `localStorage` and sends it on sign-in; each device id is one account, so the same browser always returns to the same profile (sessions last a year). New accounts go to `/welcome` (name, username, optional Canvas) and `/welcome/niches`.
 
-**Sending the emails:** add `RESEND_API_KEY` and `EMAIL_FROM` (a sender on a domain you've verified in [Resend](https://resend.com)) to `.env.local`. Until then, codes are printed in the terminal running `npm run dev`, and the sign-in page says so.
+There's no email, password or student check, so anyone with the link can join. That's fine for a demo. Before a real launch, put a real sign-in back (e.g. school email + one-time code). Clearing browser data on a device means starting a new account.
 
 ## What's in it
 

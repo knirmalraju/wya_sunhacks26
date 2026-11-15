@@ -11,7 +11,7 @@ export function UsernameField({ initial, suggestions }: { initial: string; sugge
         <span aria-hidden="true" className="text-muted">@</span>
         <input id="username" name="username" value={value} onChange={(e) => setValue(e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, ""))} maxLength={30} className="min-w-0 flex-1 bg-transparent pl-0.5 text-[15px] font-semibold outline-none" />
       </div>
-      <span className="text-xs text-muted">You can change it anytime. We recommend the part of your email before the @.</span>
+      <span className="text-xs text-muted">You can change it anytime. Pick something friends will recognize.</span>
       <div className="flex flex-wrap gap-2">
         {suggestions.map((s) => (
           <button key={s.value} type="button" aria-pressed={value === s.value} onClick={() => setValue(s.value)} className={`min-h-10 cursor-pointer rounded-full border px-3 text-[13px] font-semibold ${value === s.value ? "border-maroon bg-maroon-tint text-maroon" : "border-line-strong bg-white"}`}>
